@@ -1,0 +1,49 @@
+---
+# Productivity Services
+- Services:
+    - Paperless-ngx:
+        icon: paperless.png
+        href: http://192.168.10.111:8000
+        description: Document Management
+        widget:
+          type: paperlessngx
+          url: http://paperless:8000
+          key: {{HOMEPAGE_VAR_PAPERLESS_API_KEY}}
+
+    - Tandoor Recipes:
+        icon: tandoor.png
+        href: http://192.168.10.111:8080
+        description: Recipe Management
+
+    - Nginx Proxy Manager:
+        icon: nginx-proxy-manager.png
+        href: http://192.168.10.111:81
+        description: Reverse Proxy
+        widget:
+          type: npm
+          url: http://npm:81
+          username: {{HOMEPAGE_VAR_NPM_USER}}
+          password: {{HOMEPAGE_VAR_NPM_PASS}}
+
+# Monitoring
+- Monitoring:
+    - Uptime Kuma:
+        icon: uptime-kuma.png
+        href: http://192.168.10.111:3001
+        description: Service Monitoring
+        widget:
+          type: uptimekuma
+          url: http://uptime-kuma:3001
+          slug: default
+
+    - Proxmox:
+        icon: proxmox.png
+        href: https://192.168.10.10:8006
+        description: Hypervisor Management
+
+# Development
+- Development:
+    - code-server:
+        icon: vscode.png
+        href: http://192.168.10.111:8443
+        description: VS Code in Browser

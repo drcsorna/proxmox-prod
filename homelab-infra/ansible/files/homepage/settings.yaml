@@ -1,0 +1,17 @@
+---
+title: Flow Homelab
+background: https://images.unsplash.com/photo-1557683316-973673baf926
+
+theme: dark
+color: slate
+
+layout:
+  Services:
+    style: row
+    columns: 3
+  Monitoring:
+    style: row
+    columns: 2
+  Development:
+    style: row
+    columns: 2
