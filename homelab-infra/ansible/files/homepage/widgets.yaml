@@ -1,10 +1,20 @@
 ---
 - resources:
+    label: Proxmox Host (bubver)
+    backend: proxmox
+    url: https://192.168.10.10:8006
+    username: root@pam!homepage
+    password: 6490cd10-a997-4686-85f6-dec67fe944c0
+    node: bubver
+
+- resources:
+    label: Docker VM (VM 100)
+    backend: resources
+    expanded: true
     cpu: true
     memory: true
     disk: /
-    cputemp: true
-    uptime: true
+    uptime: true  # Add uptime display
 
 - search:
     provider: google

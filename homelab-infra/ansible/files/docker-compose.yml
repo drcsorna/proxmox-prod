@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==========================================
   # Nginx Proxy Manager - Reverse Proxy
@@ -151,13 +149,13 @@ services:
       retries: 3
 
   tandoor:
-    image: vabene1111/recipes:latest
+    image: ghcr.io/tandoorrecipes/recipes:latest
     container_name: tandoor
     restart: unless-stopped
     depends_on:
       - tandoor-postgres
     ports:
-      - '8080:8080'
+      - '8080:80'
     environment:
       - SECRET_KEY=${TANDOOR_SECRET_KEY}
       - DB_ENGINE=django.db.backends.postgresql
@@ -209,9 +207,13 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Amsterdam
+      - HOMEPAGE_ALLOWED_HOSTS=192.168.10.110:3000
     volumes:
       - ./homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker integration
+      - /proc:/host/proc:ro       # ← ADD THIS for CPU stats
+      - /sys:/host/sys:ro         # ← ADD THIS for system stats  
+      - /:/host:ro                # ← ADD THIS for disk stats
     networks:
       - services
 

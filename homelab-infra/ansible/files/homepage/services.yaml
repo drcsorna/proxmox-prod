@@ -3,7 +3,7 @@
 - Services:
     - Paperless-ngx:
         icon: paperless.png
-        href: http://192.168.10.111:8000
+        href: http://192.168.10.110:8000
         description: Document Management
         widget:
           type: paperlessngx
@@ -12,12 +12,12 @@
 
     - Tandoor Recipes:
         icon: tandoor.png
-        href: http://192.168.10.111:8080
+        href: http://192.168.10.110:8080
         description: Recipe Management
 
     - Nginx Proxy Manager:
         icon: nginx-proxy-manager.png
-        href: http://192.168.10.111:81
+        href: http://192.168.10.110:81
         description: Reverse Proxy
         widget:
           type: npm
@@ -29,7 +29,7 @@
 - Monitoring:
     - Uptime Kuma:
         icon: uptime-kuma.png
-        href: http://192.168.10.111:3001
+        href: http://192.168.10.110:3001
         description: Service Monitoring
         widget:
           type: uptimekuma
@@ -40,10 +40,16 @@
         icon: proxmox.png
         href: https://192.168.10.10:8006
         description: Hypervisor Management
+        widget:
+          type: proxmox
+          url: https://192.168.10.10:8006
+          username: root@pam!homepage  # Format: user@pam!tokenid
+          password: 6490cd10-a997-4686-85f6-dec67fe944c0  # Your token secret
+          node: bubver  # Your Proxmox node name (check in Proxmox UI)
 
 # Development
 - Development:
     - code-server:
         icon: vscode.png
-        href: http://192.168.10.111:8443
+        href: http://192.168.10.110:8443
         description: VS Code in Browser

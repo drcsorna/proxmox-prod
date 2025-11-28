@@ -16,6 +16,7 @@ provider "proxmox" {
   
   ssh {
     agent = true
+    username = "root"
   }
 }
 
@@ -76,7 +77,7 @@ resource "proxmox_virtual_environment_vm" "vm110" {
 
   # Cloud-init configuration
   initialization {
-    datastore_id = "local"
+    datastore_id = "flash"
     
     ip_config {
       ipv4 {
@@ -92,7 +93,7 @@ resource "proxmox_virtual_environment_vm" "vm110" {
   }
 
   # Machine configuration
-  machine       = "i440fx"
+  machine       = "q35"
   scsi_hardware = "virtio-scsi-single"
   bios          = "seabios"
 }
