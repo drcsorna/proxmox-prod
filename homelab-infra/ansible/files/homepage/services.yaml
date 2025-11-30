@@ -1,55 +1,130 @@
 ---
-# Productivity Services
-- Services:
-    - Paperless-ngx:
-        icon: paperless.png
-        href: http://192.168.10.110:8000
-        description: Document Management
-        widget:
-          type: paperlessngx
-          url: http://paperless:8000
-          key: {{HOMEPAGE_VAR_PAPERLESS_API_KEY}}
-
-    - Tandoor Recipes:
-        icon: tandoor.png
-        href: http://192.168.10.110:8080
-        description: Recipe Management
-
-    - Nginx Proxy Manager:
-        icon: nginx-proxy-manager.png
-        href: http://192.168.10.110:81
-        description: Reverse Proxy
-        widget:
-          type: npm
-          url: http://npm:81
-          username: {{HOMEPAGE_VAR_NPM_USER}}
-          password: {{HOMEPAGE_VAR_NPM_PASS}}
-
-# Monitoring
-- Monitoring:
-    - Uptime Kuma:
-        icon: uptime-kuma.png
-        href: http://192.168.10.110:3001
-        description: Service Monitoring
-        widget:
-          type: uptimekuma
-          url: http://uptime-kuma:3001
-          slug: default
-
-    - Proxmox:
-        icon: proxmox.png
-        href: https://192.168.10.10:8006
-        description: Hypervisor Management
-        widget:
-          type: proxmox
-          url: https://192.168.10.10:8006
-          username: root@pam!homepage  # Format: user@pam!tokenid
-          password: 6490cd10-a997-4686-85f6-dec67fe944c0  # Your token secret
-          node: bubver  # Your Proxmox node name (check in Proxmox UI)
-
-# Development
+# Development (will appear on left)
 - Development:
     - code-server:
         icon: vscode.png
         href: http://192.168.10.110:8443
         description: VS Code in Browser
+
+# Monitoring (will appear on right, next to Development)
+- Monitoring:
+    - Uptime Kuma:
+        name: Infrastructure
+        icon: uptime-kuma.png
+        href: http://192.168.10.110:3001
+        widget:
+          type: uptimekuma
+          url: http://uptime-kuma:3001
+          slug: infra
+    - Uptime Kuma:
+        name: Media
+        icon: uptime-kuma.png
+        href: http://192.168.10.110:3001
+        widget:
+          type: uptimekuma
+          url: http://uptime-kuma:3001
+          slug: media
+    - Uptime Kuma:
+        name: Productivity
+        icon: uptime-kuma.png
+        href: http://192.168.10.110:3001
+        widget:
+          type: uptimekuma
+          url: http://uptime-kuma:3001
+          slug: productivity
+
+# Media
+- Media:
+    - Jellyfin:
+        icon: jellyfin.png
+        href: http://192.168.10.210:8096
+        description: Media Server
+        widget:
+          type: jellyfin
+          url: http://192.168.10.210:8096
+          key: {{HOMEPAGE_VAR_JELLYFIN_KEY}}
+    - Jellyseerr:
+        icon: jellyseerr.png
+        href: http://192.168.10.210:5055
+        description: Media Requests
+        widget:
+          type: jellyseerr
+          url: http://192.168.10.210:5055
+          key: {{HOMEPAGE_VAR_JELLYSEERR_KEY}}
+    - Sonarr:
+        icon: sonarr.png
+        href: http://192.168.10.210:8989
+        description: TV Shows
+        widget:
+          type: sonarr
+          url: http://192.168.10.210:8989
+          key: {{HOMEPAGE_VAR_SONARR_KEY}}
+    - Radarr:
+        icon: radarr.png
+        href: http://192.168.10.210:7878
+        description: Movies
+        widget:
+          type: radarr
+          url: http://192.168.10.210:7878
+          key: {{HOMEPAGE_VAR_RADARR_KEY}}
+
+# Downloads
+- Downloads:
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: http://192.168.10.210:8080
+        description: Torrent Client
+        widget:
+          type: qbittorrent
+          url: http://192.168.10.210:8080
+          username: {{HOMEPAGE_VAR_QBIT_USER}}
+          password: {{HOMEPAGE_VAR_QBIT_PASS}}
+    - Prowlarr:
+        icon: prowlarr.png
+        href: http://192.168.10.210:9696
+        description: Indexer Manager
+        widget:
+          type: prowlarr
+          url: http://192.168.10.210:9696
+          key: {{HOMEPAGE_VAR_PROWLARR_KEY}}
+    - Bazarr:
+        icon: bazarr.png
+        href: http://192.168.10.210:6767
+        description: Subtitles
+        widget:
+          type: bazarr
+          url: http://192.168.10.210:6767
+          key: {{HOMEPAGE_VAR_BAZARR_KEY}}
+
+# Productivity
+- Productivity:
+    - Paperless-ngx:
+        icon: paperless-ngx.png
+        href: http://192.168.10.110:8000
+        description: Document Management
+        widget:
+          type: paperlessngx
+          url: http://paperless:8000
+          key: f049c35a3d2cc61ebd099993ed7962862a02342b
+
+# Infrastructure
+- Infrastructure:
+    - Proxmox:
+        icon: proxmox.png
+        href: https://192.168.10.10:8006
+        description: Hypervisor
+        widget:
+          type: proxmox
+          url: https://192.168.10.10:8006
+          username: root@pam!homepage
+          password: c53f4ebe-99a8-4194-8e7a-e2ff24a305fe
+          node: bubver
+    - Nginx Proxy Manager:
+        icon: nginx-proxy-manager.png
+        href: http://192.168.10.210:81
+        description: Reverse Proxy
+        widget:
+          type: npm
+          url: http://192.168.10.210:81
+          username: {{HOMEPAGE_VAR_NPM_USER}}
+          password: {{HOMEPAGE_VAR_NPM_PASS}}

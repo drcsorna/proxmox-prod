@@ -128,52 +128,6 @@ services:
       - services
 
   # ==========================================
-  # Tandoor Recipes - Recipe Management
-  # ==========================================
-  tandoor-postgres:
-    image: postgres:16-alpine
-    container_name: tandoor-postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=tandoor
-      - POSTGRES_USER=tandoor
-      - POSTGRES_PASSWORD=${TANDOOR_DB_PASSWORD}
-    volumes:
-      - ./tandoor-postgres:/var/lib/postgresql/data
-    networks:
-      - services
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tandoor"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  tandoor:
-    image: ghcr.io/tandoorrecipes/recipes:latest
-    container_name: tandoor
-    restart: unless-stopped
-    depends_on:
-      - tandoor-postgres
-    ports:
-      - '8080:80'
-    environment:
-      - SECRET_KEY=${TANDOOR_SECRET_KEY}
-      - DB_ENGINE=django.db.backends.postgresql
-      - POSTGRES_HOST=tandoor-postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=tandoor
-      - POSTGRES_PASSWORD=${TANDOOR_DB_PASSWORD}
-      - POSTGRES_DB=tandoor
-      - TIMEZONE=Europe/Amsterdam
-      - FRACTION_PREF=0
-      - COMMENT_PREF=1
-    volumes:
-      - ./tandoor/staticfiles:/opt/recipes/staticfiles
-      - ./tandoor/mediafiles:/opt/recipes/mediafiles
-    networks:
-      - services
-
-  # ==========================================
   # Sandbox PostgreSQL - Self-Made Apps
   # ==========================================
   sandbox-postgres:
@@ -201,6 +155,8 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - '3000:3000'
     environment:
@@ -208,12 +164,13 @@ services:
       - PGID=1000
       - TZ=Europe/Amsterdam
       - HOMEPAGE_ALLOWED_HOSTS=192.168.10.110:3000
+      - NODE_TLS_REJECT_UNAUTHORIZED=0  # ← ADD THIS LINE
     volumes:
       - ./homepage/config:/app/config
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker integration
-      - /proc:/host/proc:ro       # ← ADD THIS for CPU stats
-      - /sys:/host/sys:ro         # ← ADD THIS for system stats  
-      - /:/host:ro                # ← ADD THIS for disk stats
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
     networks:
       - services
 

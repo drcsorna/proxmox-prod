@@ -111,9 +111,6 @@
         - "{{ docker_dir }}/paperless-postgres"
         - "{{ docker_dir }}/paperless-redis"
         - "{{ docker_dir }}/uptime-kuma"
-        - "{{ docker_dir }}/tandoor/staticfiles"
-        - "{{ docker_dir }}/tandoor/mediafiles"
-        - "{{ docker_dir }}/tandoor-postgres"
         - "{{ docker_dir }}/sandbox-postgres"
         - "{{ docker_dir }}/homepage/config"
 
@@ -130,8 +127,6 @@
         - paperless_db_password
         - paperless_secret_key
         - paperless_admin_password
-        - tandoor_db_password
-        - tandoor_secret_key
         - sandbox_db_password
 
     - name: Generate missing secrets
@@ -162,8 +157,6 @@
         - paperless_db_password
         - paperless_secret_key
         - paperless_admin_password
-        - tandoor_db_password
-        - tandoor_secret_key
         - sandbox_db_password
       no_log: true
 
@@ -184,12 +177,20 @@
           PAPERLESS_ADMIN_PASSWORD={{ secrets_content.results[4].content | b64decode }}
           PAPERLESS_ADMIN_EMAIL=drcsorna@gmail.com
 
-          # Tandoor Recipes Configuration
-          TANDOOR_DB_PASSWORD={{ secrets_content.results[5].content | b64decode }}
-          TANDOOR_SECRET_KEY={{ secrets_content.results[6].content | b64decode }}
-
           # Sandbox PostgreSQL Configuration
-          SANDBOX_DB_PASSWORD={{ secrets_content.results[7].content | b64decode }}
+          SANDBOX_DB_PASSWORD={{ secrets_content.results[5].content | b64decode }}
+
+          #Homepage config
+          HOMEPAGE_VAR_SONARR_KEY=31be4f66f8e74ea7bf13be8eb8d2e330
+          HOMEPAGE_VAR_RADARR_KEY=8fe3e5abba4d436385d499c7c429adc3
+          HOMEPAGE_VAR_PROWLARR_KEY=40a2e319b57f4ce6b0d907930da22f52
+          HOMEPAGE_VAR_BAZARR_KEY=101165fc607c57c426026fe5af8d9b06
+          HOMEPAGE_VAR_JELLYFIN_KEY=7735c44f5b00420b81cb61b7d5fc1ba9
+          HOMEPAGE_VAR_JELLYSEERR_KEY=MTc2MjA5NzQ2NDQwOTJiNWE1NmM0LWFhMDEtNDc2ZS1iMDQyLTRkNGZhYmQ4ZWUyZg==
+          HOMEPAGE_VAR_QBIT_USER=drcsorna
+          HOMEPAGE_VAR_QBIT_PASS=qITBQPtSdKFgNRqzPkZvhgThRPgvMLhBEz
+          HOMEPAGE_VAR_NPM_USER=drcsorna@gmail.com
+          HOMEPAGE_VAR_NPM_PASS=THqCgWRTorypPntCZpzkNFfdGTPZHuLpGk
         dest: "{{ docker_dir }}/.env"
         mode: '0600'
         owner: "{{ ansible_user }}"
@@ -241,17 +242,6 @@
         project_src: "{{ docker_dir }}"
         services:
           - paperless
-        state: restarted
-      become_user: "{{ ansible_user }}"
-
-    # ====================================
-    # Restart Tandoor Stack
-    # ====================================
-    - name: Restart Tandoor container for final initialization
-      community.docker.docker_compose_v2:
-        project_src: "{{ docker_dir }}"
-        services:
-          - tandoor
         state: restarted
       become_user: "{{ ansible_user }}"
 

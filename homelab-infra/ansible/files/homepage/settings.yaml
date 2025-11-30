@@ -1,17 +1,25 @@
 ---
-title: Flow Homelab
+title: Bubver Home
 background: https://images.unsplash.com/photo-1557683316-973673baf926
-
 theme: dark
 color: slate
 
 layout:
-  Services:
-    style: row
-    columns: 3
-  Monitoring:
-    style: row
-    columns: 2
   Development:
-    style: row
-    columns: 2
+    style: column
+    columns: 12
+  Monitoring:
+    style: column
+    columns: 6
+  Media:
+    style: column
+    columns: 3
+  Downloads:
+    style: column
+    columns: 3
+  Productivity:
+    style: column
+    columns: 3
+  Infrastructure:
+    style: column
+    columns: 3
