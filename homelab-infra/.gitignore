@@ -5,9 +5,13 @@ terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
 terraform/terraform.tfvars
 
-# Ansible sensitive files
-ansible/.env
-ansible/files/.env
+# Ansible vm110 sensitive files
+ansible-vm110/.env
+ansible-vm110/files/.env
+
+# Ansible vm220 sensitive files
+ansible-vm220/.env
+ansible-vm220/files/.env
 
 # OS files
 .DS_Store

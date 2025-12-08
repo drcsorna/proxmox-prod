@@ -1,0 +1,25 @@
+/* Force 2 groups in first row, then new row */
+#layout-groups {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+
+#layout-groups > div:nth-child(1),
+#layout-groups > div:nth-child(2) {
+  flex: 0 0 calc(50% - 0.5rem) !important;
+  max-width: calc(50% - 0.5rem) !important;
+}
+
+/* Force row break after 2nd group */
+#layout-groups > div:nth-child(2) {
+  margin-right: 100% !important;
+}
+
+/* Make next 4 groups equal width (25% each) */
+#layout-groups > div:nth-child(3),
+#layout-groups > div:nth-child(4),
+#layout-groups > div:nth-child(5),
+#layout-groups > div:nth-child(6) {
+  flex: 0 0 calc(25% - 0.5rem) !important;
+  max-width: calc(25% - 0.5rem) !important;
+}

@@ -113,6 +113,48 @@
         - "{{ docker_dir }}/uptime-kuma"
         - "{{ docker_dir }}/sandbox-postgres"
         - "{{ docker_dir }}/homepage/config"
+    
+    # ====================================
+    # Flow Journal Setup - FILES ONLY
+    # ====================================
+    - name: Create Flow Journal directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      loop:
+        - /opt/flowjournal
+        - /opt/flowjournal/backend
+        - /opt/flowjournal/frontend
+
+    - name: Copy Flow Journal backend files
+      copy:
+        src: "files/flowjournal/backend/{{ item }}"
+        dest: "/opt/flowjournal/backend/{{ item }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      loop:
+        - app.py
+        - requirements.txt
+
+    - name: Template Flow Journal frontend with host IP
+      template:
+        src: files/flowjournal/frontend/index.html.j2
+        dest: /opt/flowjournal/frontend/index.html
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+
+    - name: Copy Flow Journal database schema
+      copy:
+        src: files/flowjournal/schema.sql
+        dest: /opt/flowjournal/schema.sql
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
 
     # ====================================
     # Generate Secrets (Idempotent)
@@ -219,6 +261,7 @@
         - services.yaml
         - widgets.yaml
         - settings.yaml
+        - custom.css 
 
     # ====================================
     # Start Services
@@ -227,7 +270,30 @@
       community.docker.docker_compose_v2:
         project_src: "{{ docker_dir }}"
         state: present
+        build: always
       become_user: "{{ ansible_user }}"
+
+    # ====================================
+    # Flow Journal Database Setup
+    # ====================================
+    - name: Wait for sandbox-postgres container to be ready with retries
+      shell: docker exec sandbox-postgres pg_isready -U sandbox
+      register: db_check
+      until: db_check.rc == 0
+      retries: 12 # Try 12 times (60 seconds total)
+      delay: 5    # Wait 5 seconds between checks
+      changed_when: false
+
+    - name: Create Flow Journal database
+      shell: docker exec sandbox-postgres psql -U sandbox -c "CREATE DATABASE flowjournal;"
+      register: db_create
+      failed_when:
+        - db_create.rc != 0
+        - '"already exists" not in db_create.stderr'
+
+    - name: Initialize Flow Journal database schema
+      shell: docker exec -i sandbox-postgres psql -U sandbox flowjournal < /opt/flowjournal/schema.sql
+      when: db_create.rc == 0
 
     # ====================================
     # FIX: Paperless-ngx Redis Persistence

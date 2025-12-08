@@ -1,0 +1,317 @@
+---
+# VM 210 Media Stack Deployment
+# Single playbook for complete setup
+# Run: ansible-playbook -i hosts deploy.yml --ask-become-pass --ask-vault-pass
+
+- name: Deploy VM 210 Media Stack
+  hosts: media_server
+  become: yes
+  
+  vars_prompt:
+    - name: smb_password
+      prompt: "Enter SMB password for {{ smb_user }}"
+      private: yes
+
+  tasks:
+    # =============================================================================
+    # SYSTEM SETUP
+    # =============================================================================
+    
+    - name: Install required system packages
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - vim
+          - htop
+          - tree
+          - net-tools
+          - cifs-utils
+          - nfs-common
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+      tags: [system, packages]
+
+    - name: Set timezone
+      timezone:
+        name: "{{ timezone }}"
+      tags: [system]
+
+    - name: Enable IP forwarding for Tailscale subnet routing
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      tags: [system, tailscale]
+
+    # =============================================================================
+    # DOCKER INSTALLATION
+    # =============================================================================
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      tags: [docker]
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      tags: [docker]
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+      tags: [docker]
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+      tags: [docker]
+
+    - name: Configure Docker daemon
+      copy:
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            }
+          }
+        dest: /etc/docker/daemon.json
+      notify: restart docker
+      tags: [docker]
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+      tags: [docker]
+
+    # =============================================================================
+    # STORAGE MOUNTS
+    # =============================================================================
+
+    - name: Create SMB credentials file
+      copy:
+        content: |
+          username={{ smb_user }}
+          password={{ smb_password }}
+        dest: /root/.smbcredentials
+        mode: '0600'
+        owner: root
+        group: root
+      tags: [storage]
+
+    - name: Create mount points
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /mnt/tank
+        - /mnt/flash
+      tags: [storage]
+
+    - name: Add SMB mounts to fstab
+      mount:
+        path: "{{ item.path }}"
+        src: "{{ item.src }}"
+        fstype: cifs
+        opts: "credentials=/root/.smbcredentials,uid={{ media_uid }},gid={{ media_gid }},file_mode=0775,dir_mode=0775,_netdev"
+        state: mounted
+      loop:
+        - { path: '/mnt/tank', src: '//{{ proxmox_host }}/{{ tank_share }}' }
+        - { path: '/mnt/flash', src: '//{{ proxmox_host }}/{{ flash_share }}' }
+      tags: [storage]
+
+    - name: Create data directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ media_uid }}"
+        group: "{{ media_gid }}"
+        mode: '0775'
+      loop:
+        - /mnt/tank/torrents/movies
+        - /mnt/tank/torrents/tv
+        - /mnt/tank/torrents/incomplete
+        - /mnt/tank/media/movies
+        - /mnt/tank/media/tv
+        - /mnt/tank/photos  # Immich
+      tags: [storage]
+
+    - name: Create Docker config directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ media_uid }}"
+        group: "{{ media_gid }}"
+        mode: '0775'
+      loop:
+        - "{{ docker_root }}"
+        - /mnt/flash/jellyfin
+        - /mnt/flash/sonarr
+        - /mnt/flash/radarr
+        - /mnt/flash/prowlarr
+        - /mnt/flash/bazarr
+        - /mnt/flash/qbittorrent
+        - /mnt/flash/gluetun
+        - /mnt/flash/jellyseerr
+        - /mnt/flash/flaresolverr
+        - /mnt/flash/immich
+        - /mnt/flash/immich/postgres
+      tags: [storage]
+
+    # =============================================================================
+    # TAILSCALE
+    # =============================================================================
+
+    - name: Download Tailscale install script
+      get_url:
+        url: https://tailscale.com/install.sh
+        dest: /tmp/tailscale-install.sh
+        mode: '0755'
+      tags: [tailscale]
+
+    - name: Install Tailscale
+      shell: /tmp/tailscale-install.sh
+      args:
+        creates: /usr/bin/tailscale
+      tags: [tailscale]
+
+    - name: Check if Tailscale is authenticated
+      shell: tailscale status
+      register: tailscale_status
+      failed_when: false
+      changed_when: false
+      tags: [tailscale]
+
+    - name: Display Tailscale setup instructions
+      debug:
+        msg: |
+          Tailscale is installed but not authenticated.
+          Run manually: sudo tailscale up --advertise-routes={{ lan_subnet }} --accept-routes=false
+          Then approve subnet route in Tailscale admin console.
+      when: tailscale_status.rc != 0
+      tags: [tailscale]
+
+    # =============================================================================
+    # MEDIA STACK DEPLOYMENT
+    # =============================================================================
+
+    - name: Check if docker-compose.yml exists
+      stat:
+        path: "{{ docker_root }}/docker-compose.yml"
+      register: compose_exists
+      tags: [media]
+
+    - name: Backup existing docker-compose.yml
+      copy:
+        src: "{{ docker_root }}/docker-compose.yml"
+        dest: "{{ docker_root }}/docker-compose.yml.backup-{{ ansible_date_time.epoch }}"
+        remote_src: yes
+      when: compose_exists.stat.exists
+      tags: [media]
+
+    - name: Deploy docker-compose.yml
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ docker_root }}/docker-compose.yml"
+        owner: "{{ media_uid }}"
+        group: "{{ media_gid }}"
+        mode: '0644'
+      tags: [media]
+
+    - name: Check if .env exists
+      stat:
+        path: "{{ docker_root }}/.env"
+      register: env_exists
+      tags: [media]
+
+    - name: Deploy .env template (only if doesn't exist)
+      template:
+        src: env.j2
+        dest: "{{ docker_root }}/.env"
+        owner: "{{ media_uid }}"
+        group: "{{ media_gid }}"
+        mode: '0600'
+      when: not env_exists.stat.exists
+      tags: [media]
+
+    - name: Display VPN credentials reminder
+      debug:
+        msg: |
+          ⚠️  IMPORTANT: Edit {{ docker_root }}/.env and add your VPN credentials:
+          - WIREGUARD_PRIVATE_KEY=your_key_here
+          - WIREGUARD_ADDRESSES=your_vpn_ip/32
+          - SERVER_CITIES=Amsterdam
+      when: not env_exists.stat.exists
+      tags: [media]
+
+    - name: Start media stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ docker_root }}"
+        state: present
+      become_user: "{{ ansible_user }}"
+      tags: [media]
+
+    # =============================================================================
+    # VERIFICATION
+    # =============================================================================
+
+    - name: Wait for services to be healthy
+      wait_for:
+        host: 127.0.0.1
+        port: "{{ item }}"
+        timeout: 60
+      loop:
+        - "{{ jellyfin_port }}"
+        - "{{ sonarr_port }}"
+        - "{{ radarr_port }}"
+        - "{{ immich_server_port }}"
+      tags: [verify]
+
+    - name: Display service URLs
+      debug:
+        msg: |
+          ✅ Deployment complete! Services available at:
+          
+          Media Services:
+          - Jellyfin:     http://{{ ansible_host }}:{{ jellyfin_port }}
+          - Sonarr:       http://{{ ansible_host }}:{{ sonarr_port }}
+          - Radarr:       http://{{ ansible_host }}:{{ radarr_port }}
+          - Prowlarr:     http://{{ ansible_host }}:{{ prowlarr_port }}
+          - Bazarr:       http://{{ ansible_host }}:{{ bazarr_port }}
+          - qBittorrent:  http://{{ ansible_host }}:{{ qbittorrent_port }}
+          - Jellyseerr:   http://{{ ansible_host }}:{{ jellyseerr_port }}
+          - Immich:       http://{{ ansible_host }}:{{ immich_server_port }}
+          
+          Next steps:
+          1. Authenticate Tailscale: sudo tailscale up --advertise-routes={{ lan_subnet }}
+          2. Fill VPN credentials in {{ docker_root }}/.env
+          3. Configure services via web UI
+      tags: [verify]
+
+  handlers:
+    - name: restart docker
+      systemd:
+        name: docker
+        state: restarted

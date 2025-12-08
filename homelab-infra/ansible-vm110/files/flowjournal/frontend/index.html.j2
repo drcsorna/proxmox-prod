@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Napló</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #FFF5EB 0%, #FFE8D6 100%);
+        }
+        
+        .emotion-chip {
+            @apply px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all;
+            background: white;
+            border: 2px solid #E8DDD0;
+        }
+        
+        .emotion-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .emotion-chip.selected {
+            background: #FFB366;
+            border-color: #FF9933;
+            color: white;
+        }
+        
+        textarea, input[type="text"], input[type="password"] {
+            @apply w-full p-3 rounded-lg border-2 border-gray-200 focus:border-orange-300 focus:outline-none transition-colors;
+            background: white;
+        }
+        
+        .btn-primary {
+            @apply px-6 py-3 rounded-lg font-medium transition-all;
+            background: #FFB366;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #FF9933;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 147, 51, 0.3);
+        }
+        
+        .section-card {
+            @apply bg-white rounded-2xl p-6 shadow-lg mb-6;
+        }
+        
+        .emotion-wheel-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .wheel-layer {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .wheel-layer:hover {
+            opacity: 0.8;
+        }
+        
+        .info-box {
+            @apply bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg text-sm;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4" x-data="journalApp()" x-cloak>
+    
+    <!-- Login/Register Page -->
+    <div x-show="!user && page === 'auth'" class="max-w-md mx-auto mt-20">
+        <div class="section-card">
+            <h1 class="text-3xl font-bold text-center mb-8" style="color: #FF9933;">Flow Napló</h1>
+            
+            <div class="space-y-4">
+                <input type="text" x-model="authForm.username" placeholder="Felhasználónév" 
+                       @keyup.enter="login()">
+                <input type="password" x-model="authForm.password" placeholder="Jelszó"
+                       @keyup.enter="login()">
+                
+                <div class="flex gap-3">
+                    <button @click="login()" class="btn-primary flex-1">Bejelentkezés</button>
+                    <button @click="register()" class="btn-primary flex-1">Regisztráció</button>
+                </div>
+                
+                <p x-show="error" x-text="error" class="text-red-500 text-sm text-center"></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Intro Reflection (7 Questions) -->
+    <div x-show="user && !introCompleted && page === 'intro'" class="max-w-3xl mx-auto">
+        <div class="section-card">
+            <h1 class="text-3xl font-bold mb-2" style="color: #FF9933;">Bevezető Önreflexió</h1>
+            <p class="text-gray-600 mb-8">Kérlek, válaszolj az alábbi kérdésekre részletesen.</p>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block font-medium mb-2">1. Mik voltak az elmúlt időszak legfontosabb történései az életedben?</label>
+                    <textarea x-model="introForm.q1_important_events" rows="4"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block font-medium mb-2">2. Mik azok a gondolatok, amik mostanában foglalkoztatnak?</label>
+                    <textarea x-model="introForm.q2_current_thoughts" rows="4"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block font-medium mb-2">3. Vannak olyan testi tüneteid, amelyek kényelmetlenek számodra? Bármi, ami napi szinten megjelenik. Sorold fel őket.</label>
+                    <textarea x-model="introForm.q3_physical_symptoms" rows="4"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block font-medium mb-2">4. Hogyan érzed magad mostanában? Nyugodtan írj le többféle érzelmi állapotot, ami jellemzi a napjaidat. Használd bátran az érzelemkereket, és válaszd ki az érzéseidet legjobban körülíró kifejezéseket.</label>
+                    <textarea x-model="introForm.q4_current_feelings" rows="4"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block font-medium mb-2">5. Mi az, ami közelebb vitt magadhoz, amiért hálás vagy az elmúlt hónapokban? (Emberek, történések, működések.)</label>
+                    <textarea x-model="introForm.q5_brought_closer" rows="4"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block font-medium mb-2">6. Mi az, ami távolabb vitt önmagadtól, ami nehéz érzéssel tölt el?</label>
+                    <textarea x-model="introForm.q6_brought_further" rows="4"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block font-medium mb-2">7. Milyen változást szeretnél látni az életedben 10 hét múlva?</label>
+                    <textarea x-model="introForm.q7_change_in_10_weeks" rows="4"></textarea>
+                </div>
+                
+                <button @click="saveIntroReflection()" class="btn-primary w-full">Mentés és tovább</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Daily Entry Page -->
+    <div x-show="user && introCompleted && page === 'daily'" class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold" style="color: #FF9933;">
+                    Flow Napló - <span x-text="new Date(dailyForm.entry_date).toLocaleDateString('hu-HU')"></span>
+                </h1>
+                <p class="text-sm text-gray-600 mt-1" x-show="daysSinceStart > 0">
+                    📅 <span x-text="daysSinceStart"></span>. nap • Hét: <span x-text="currentWeek"></span>
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <input type="date" x-model="dailyForm.entry_date" @change="loadDailyEntry()" 
+                       class="p-2 rounded-lg border-2 border-gray-200">
+                <button @click="page = 'weekly'; loadWeeklyReflection(currentWeek)" 
+                        class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600"
+                        x-show="currentWeek > 0">
+                    📝 Heti reflexió
+                </button>
+                <button @click="page = 'final'; loadFinalReflection()" 
+                        class="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+                        x-show="daysSinceStart >= 70">
+                    🎉 Záró reflexió
+                </button>
+                <button @click="page = 'settings'" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">
+                    Beállítások
+                </button>
+                <button @click="logout()" class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
+                    Kilépés
+                </button>
+            </div>
+        </div>
+        
+        <!-- Section 1: Hogyan érzem magam? -->
+        <div class="section-card">
+            <h2 class="text-2xl font-bold mb-4" style="color: #FF9933;">Hogyan érzem magam?</h2>
+            
+            <!-- Energy Level Slider -->
+            <div class="mb-6">
+                <label class="block font-medium mb-3">Energiaszintem ma: <span class="text-2xl font-bold" x-text="dailyForm.energy_level || '-'"></span>/10</label>
+                <input type="range" min="1" max="10" x-model="dailyForm.energy_level" 
+                       class="w-full h-3 rounded-lg appearance-none cursor-pointer"
+                       style="background: linear-gradient(to right, #FFB366 0%, #FF9933 100%);">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block font-medium mb-3">Válassz érzelmet (több is lehetséges):</label>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="emotion in emotionsList" :key="emotion">
+                        <button 
+                            @click="toggleEmotion(emotion)"
+                            class="emotion-chip"
+                            :class="{ 'selected': dailyForm.selected_emotions.includes(emotion) }"
+                            x-text="emotion">
+                        </button>
+                    </template>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-medium mb-2">Hogyan szeretném érzeni magam?</label>
+                    <input type="text" x-model="dailyForm.how_want_to_feel">
+                </div>
+                <div>
+                    <label class="block font-medium mb-2">Mai megerősítő mantram:</label>
+                    <input type="text" x-model="dailyForm.daily_mantra">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 2: Hálás vagyok + Célok -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="section-card">
+                <h3 class="text-xl font-bold mb-4" style="color: #FF9933;">Hálás vagyok:</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm mb-1">1.</label>
+                        <input type="text" x-model="dailyForm.grateful_1">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">2.</label>
+                        <input type="text" x-model="dailyForm.grateful_2">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">3.</label>
+                        <input type="text" x-model="dailyForm.grateful_3">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-card">
+                <h3 class="text-xl font-bold mb-4" style="color: #FF9933;">Legfontosabb célok:</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm mb-1">1.</label>
+                        <input type="text" x-model="dailyForm.goal_1">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">2.</label>
+                        <input type="text" x-model="dailyForm.goal_2">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">3.</label>
+                        <input type="text" x-model="dailyForm.goal_3">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section 3: Öngondoskodás -->
+        <div class="section-card">
+            <h2 class="text-2xl font-bold mb-4" style="color: #FF9933;">Öngondoskodás</h2>
+            
+            <div class="mb-6">
+                <label class="block font-medium mb-2">Mit teszek/tettem ma magamért?</label>
+                <textarea x-model="dailyForm.selfcare_actions" rows="4"></textarea>
+            </div>
+            
+            <!-- Large journal section with emotion wheel -->
+            <div class="grid lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <label class="block font-medium mb-2">Ez a Te tered! Írj (vagy ne írj) ide bármit, amit szeretnél!</label>
+                    <textarea x-model="dailyForm.free_journal" rows="20" 
+                              placeholder="Gondolatok, felismerések, tervek, érzések..."></textarea>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Info box -->
+                    <div class="info-box">
+                        <p class="text-sm">
+                            <strong>Ha nem tudod, mit írj ide:</strong><br>
+                            milyen gondolatok foglalkoztattak ma? volt egy fontos felismerésed? 
+                            van valami, amit tervezel és leírnád? mit üzennél annak, 
+                            aki ma kihozott a béketűrésedből?
+                        </p>
+                    </div>
+                    
+                    <!-- Emotion Wheel Placeholder -->
+                    <div class="emotion-wheel-container bg-white p-4 rounded-lg shadow">
+                        <h4 class="text-center font-bold mb-3" style="color: #FF9933;">Érzelemkerék</h4>
+                        <svg viewBox="0 0 400 400" class="w-full">
+                            <!-- Simplified 3-layer wheel visualization -->
+                            <circle cx="200" cy="200" r="180" fill="none" stroke="#333" stroke-width="2"/>
+                            <circle cx="200" cy="200" r="120" fill="none" stroke="#333" stroke-width="2"/>
+                            <circle cx="200" cy="200" r="60" fill="none" stroke="#333" stroke-width="2"/>
+                            
+                            <!-- Core emotions (6 segments) -->
+                            <path d="M 200 200 L 200 20 A 180 180 0 0 1 355.9 110 Z" fill="#FFB366" opacity="0.7"/>
+                            <path d="M 200 200 L 355.9 110 A 180 180 0 0 1 355.9 290 Z" fill="#D4CFC9" opacity="0.7"/>
+                            <path d="M 200 200 L 355.9 290 A 180 180 0 0 1 200 380 Z" fill="#FFB366" opacity="0.7"/>
+                            <path d="M 200 200 L 200 380 A 180 180 0 0 1 44.1 290 Z" fill="#C8CDD4" opacity="0.7"/>
+                            <path d="M 200 200 L 44.1 290 A 180 180 0 0 1 44.1 110 Z" fill="#E8DDD0" opacity="0.7"/>
+                            <path d="M 200 200 L 44.1 110 A 180 180 0 0 1 200 20 Z" fill="#E8DDD0" opacity="0.7"/>
+                            
+                            <!-- Center labels -->
+                            <text x="200" y="140" text-anchor="middle" font-size="12" font-weight="bold">ÖRÖM</text>
+                            <text x="260" y="180" text-anchor="middle" font-size="12" font-weight="bold">UNDOR</text>
+                            <text x="260" y="220" text-anchor="middle" font-size="12" font-weight="bold">HARAG</text>
+                            <text x="200" y="260" text-anchor="middle" font-size="12" font-weight="bold">SZOMORÚSÁG</text>
+                            <text x="140" y="220" text-anchor="middle" font-size="12" font-weight="bold">FÉLELEM</text>
+                            <text x="140" y="180" text-anchor="middle" font-size="12" font-weight="bold">MEGLEPETTSÉG</text>
+                        </svg>
+                        <p class="text-xs text-center text-gray-500 mt-2">
+                            Kattints az érzelmekre fent a kiválasztáshoz
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <label class="block font-medium mb-2">Napom kedvenc pillanata:</label>
+                <textarea x-model="dailyForm.favorite_moment" rows="3"></textarea>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div class="flex justify-center gap-4 mb-12">
+            <button @click="saveDailyEntry()" class="btn-primary text-lg">
+                💾 Bejegyzés mentése
+            </button>
+            <button @click="showCalendar = !showCalendar" class="px-6 py-3 rounded-lg bg-gray-200 hover:bg-gray-300">
+                📅 Korábbi bejegyzések
+            </button>
+        </div>
+        
+        <!-- Calendar view -->
+        <div x-show="showCalendar" class="section-card">
+            <h3 class="text-xl font-bold mb-4">Korábbi bejegyzések</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <template x-for="entry in entryList" :key="entry.entry_date">
+                    <button @click="selectDate(entry.entry_date)" 
+                            class="p-3 rounded-lg bg-orange-100 hover:bg-orange-200 text-left">
+                        <div class="font-bold" x-text="new Date(entry.entry_date).toLocaleDateString('hu-HU')"></div>
+                        <div class="text-sm text-gray-600" x-text="entry.selected_emotions.slice(0, 2).join(', ')"></div>
+                    </button>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Reflection Page -->
+    <div x-show="user && introCompleted && page === 'weekly'" class="max-w-4xl mx-auto">
+        <div class="section-card">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold" style="color: #FF9933;">Heti Reflexió - <span x-text="weeklyForm.week_number"></span>. hét</h2>
+                <button @click="page = 'daily'" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">
+                    ← Vissza
+                </button>
+            </div>
+            
+            <!-- Q0: Mood Selection -->
+            <div class="mb-6">
+                <label class="block font-medium mb-3">Válaszd ki a jelenlegi hangulatod:</label>
+                <div class="flex gap-4 justify-center">
+                    <button @click="weeklyForm.current_mood = 'angry'" 
+                            :class="{'ring-4 ring-orange-400': weeklyForm.current_mood === 'angry'}"
+                            class="text-6xl p-4 rounded-full hover:bg-gray-100 transition">😠</button>
+                    <button @click="weeklyForm.current_mood = 'sad'" 
+                            :class="{'ring-4 ring-orange-400': weeklyForm.current_mood === 'sad'}"
+                            class="text-6xl p-4 rounded-full hover:bg-gray-100 transition">😢</button>
+                    <button @click="weeklyForm.current_mood = 'sleepy'" 
+                            :class="{'ring-4 ring-orange-400': weeklyForm.current_mood === 'sleepy'}"
+                            class="text-6xl p-4 rounded-full hover:bg-gray-100 transition">😴</button>
+                    <button @click="weeklyForm.current_mood = 'balanced'" 
+                            :class="{'ring-4 ring-orange-400': weeklyForm.current_mood === 'balanced'}"
+                            class="text-6xl p-4 rounded-full hover:bg-gray-100 transition">😌</button>
+                    <button @click="weeklyForm.current_mood = 'king'" 
+                            :class="{'ring-4 ring-orange-400': weeklyForm.current_mood === 'king'}"
+                            class="text-6xl p-4 rounded-full hover:bg-gray-100 transition">👑</button>
+                </div>
+            </div>
+            
+            <!-- Q1: Important Results -->
+            <div class="mb-6">
+                <label class="block font-medium mb-2">A hét legfontosabb eredményei:</label>
+                <textarea x-model="weeklyForm.important_results" rows="4"></textarea>
+            </div>
+            
+            <!-- Q2: Important Realizations -->
+            <div class="mb-6">
+                <label class="block font-medium mb-2">A hét legfontosabb felismerései:</label>
+                <textarea x-model="weeklyForm.important_realizations" rows="3"></textarea>
+            </div>
+            
+            <!-- Q3: Proud of myself -->
+            <div class="mb-6">
+                <label class="block font-medium mb-3">A héten büszke vagyok magamra, mert:</label>
+                <div class="space-y-2">
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">1)</span>
+                        <input type="text" x-model="weeklyForm.proud_1" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">2)</span>
+                        <input type="text" x-model="weeklyForm.proud_2" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">3)</span>
+                        <input type="text" x-model="weeklyForm.proud_3" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">4)</span>
+                        <input type="text" x-model="weeklyForm.proud_4" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">5)</span>
+                        <input type="text" x-model="weeklyForm.proud_5" class="flex-1">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Q4: Change Phase -->
+            <div class="mb-6">
+                <label class="block font-medium mb-3">Önellenőrzés: Hol járok most a folyamárban a változás fázisai ábrája alapján?</label>
+                
+                <!-- Change Journey Visualization -->
+                <div class="grid md:grid-cols-5 gap-3 mb-4">
+                    <button @click="weeklyForm.change_phase = 'elutasitas'" 
+                            :class="{'bg-orange-400 text-white': weeklyForm.change_phase === 'elutasitas'}"
+                            class="p-4 rounded-lg border-2 border-gray-300 hover:border-orange-400 transition text-center">
+                        <div class="text-2xl mb-2">🚫</div>
+                        <div class="font-bold text-sm">ELUTASÍTÁS</div>
+                        <div class="text-xs mt-1">Szerezz információt</div>
+                    </button>
+                    <button @click="weeklyForm.change_phase = 'ellenallas'" 
+                            :class="{'bg-orange-400 text-white': weeklyForm.change_phase === 'ellenallas'}"
+                            class="p-4 rounded-lg border-2 border-gray-300 hover:border-orange-400 transition text-center">
+                        <div class="text-2xl mb-2">🌊</div>
+                        <div class="font-bold text-sm">ELLENÁLLÁS</div>
+                        <div class="text-xs mt-1">Támogasd magad</div>
+                    </button>
+                    <button @click="weeklyForm.change_phase = 'fordulopont'" 
+                            :class="{'bg-orange-400 text-white': weeklyForm.change_phase === 'fordulopont'}"
+                            class="p-4 rounded-lg border-2 border-gray-300 hover:border-orange-400 transition text-center">
+                        <div class="text-2xl mb-2">🔄</div>
+                        <div class="font-bold text-sm">FORDULÓPONT</div>
+                        <div class="text-xs mt-1">Tarts ki!</div>
+                    </button>
+                    <button @click="weeklyForm.change_phase = 'elfogadas'" 
+                            :class="{'bg-orange-400 text-white': weeklyForm.change_phase === 'elfogadas'}"
+                            class="p-4 rounded-lg border-2 border-gray-300 hover:border-orange-400 transition text-center">
+                        <div class="text-2xl mb-2">💛</div>
+                        <div class="font-bold text-sm">ELFOGADÁS</div>
+                        <div class="text-xs mt-1">Állj magad mellé</div>
+                    </button>
+                    <button @click="weeklyForm.change_phase = 'elkotelezes'" 
+                            :class="{'bg-orange-400 text-white': weeklyForm.change_phase === 'elkotelezes'}"
+                            class="p-4 rounded-lg border-2 border-gray-300 hover:border-orange-400 transition text-center">
+                        <div class="text-2xl mb-2">☀️</div>
+                        <div class="font-bold text-sm">ELKÖTELEZÖDÉS</div>
+                        <div class="text-xs mt-1">Éld meg az örömöt</div>
+                    </button>
+                </div>
+                
+                <textarea x-model="weeklyForm.change_reflection" rows="9" 
+                          placeholder="Reflektálj a választott fázisra..."></textarea>
+            </div>
+            
+            <!-- Q5: Next Week Focus -->
+            <div class="mb-6">
+                <label class="block font-medium mb-2">A jövő hét fókusza:</label>
+                <input type="text" x-model="weeklyForm.next_week_focus">
+            </div>
+            
+            <!-- Q6: Most Important Tasks -->
+            <div class="mb-6">
+                <label class="block font-medium mb-3">A legfontosabb feladataim ezek lesznek:</label>
+                <div class="space-y-2">
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">1)</span>
+                        <input type="text" x-model="weeklyForm.task_1" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">2)</span>
+                        <input type="text" x-model="weeklyForm.task_2" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">3)</span>
+                        <input type="text" x-model="weeklyForm.task_3" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">4)</span>
+                        <input type="text" x-model="weeklyForm.task_4" class="flex-1">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="font-bold">5)</span>
+                        <input type="text" x-model="weeklyForm.task_5" class="flex-1">
+                    </div>
+                </div>
+            </div>
+            
+            <button @click="saveWeeklyReflection()" class="btn-primary w-full">Heti reflexió mentése</button>
+        </div>
+    </div>
+    
+    <!-- Final Reflection Page -->
+    <div x-show="user && page === 'final'" class="max-w-4xl mx-auto">
+        <div class="section-card">
+            <h2 class="text-3xl font-bold mb-6 text-center" style="color: #FF9933;">70 Napos Záró Reflexió</h2>
+            <p class="text-center text-gray-600 mb-8">Gratulálunk! 70 napot töltöttél el a folyamnaplóddal. Itt az ideje összegezni az utazásodat.</p>
+            
+            <div class="space-y-6">
+                <!-- Q1 -->
+                <div>
+                    <label class="block font-medium mb-2">1. Honnan indultam? Milyen élethelyzetben/érzelmi állapotban voltam?</label>
+                    <textarea x-model="finalForm.q1_starting_point" rows="6"></textarea>
+                </div>
+                
+                <!-- Q2 -->
+                <div>
+                    <label class="block font-medium mb-2">2. Hogyan éreztem magam a 70 nap alatt? Mi volt a célom?</label>
+                    <textarea x-model="finalForm.q2_feeling_and_goal" rows="6"></textarea>
+                </div>
+                
+                <!-- Q3 -->
+                <div>
+                    <label class="block font-medium mb-2">3. Mi történt velem útközben? Milyen akadályokkal néztem szembe? Konkrét események, nehézségek, belső változások.</label>
+                    <textarea x-model="finalForm.q3_journey_obstacles" rows="6"></textarea>
+                </div>
+                
+                <!-- Q4 -->
+                <div>
+                    <label class="block font-medium mb-2">4. Hova érkeztem, milyen változás történt az életemben?</label>
+                    <textarea x-model="finalForm.q4_arrival_changes" rows="7"></textarea>
+                </div>
+                
+                <!-- Q5 -->
+                <div>
+                    <label class="block font-medium mb-2">5. Mit tanultam magamról?</label>
+                    <textarea x-model="finalForm.q5_self_learning" rows="7"></textarea>
+                </div>
+                
+                <!-- Q6 -->
+                <div>
+                    <label class="block font-medium mb-2">6. Merre vezet az út tovább? Mi a következő lépés?</label>
+                    <textarea x-model="finalForm.q6_future_path" rows="6"></textarea>
+                </div>
+                
+                <!-- Q7 -->
+                <div>
+                    <label class="block font-medium mb-2">7. Milyen hatással volt rám a naplózás szokásának bevezetése?</label>
+                    <textarea x-model="finalForm.q7_journaling_impact" rows="11"></textarea>
+                </div>
+                
+                <!-- Q8 -->
+                <div>
+                    <label class="block font-medium mb-2">8. Ez a Te tered! Írd ide, hogyan fogod megünnepelni a haladásodat!</label>
+                    <textarea x-model="finalForm.q8_celebration" rows="35" 
+                              placeholder="Írj szabadon, ünnepeld meg magad..."></textarea>
+                </div>
+                
+                <button @click="saveFinalReflection()" class="btn-primary w-full text-lg">
+                    🎉 Záró reflexió mentése
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Page -->
+    <div x-show="page === 'settings'" class="max-w-4xl mx-auto">
+        <div class="section-card">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold" style="color: #FF9933;">Beállítások</h2>
+                <button @click="page = 'daily'" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">
+                    ← Vissza
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-bold mb-3">Érzelemek listája</h3>
+                <p class="text-sm text-gray-600 mb-4">Add hozzá, távolítsd el vagy szerkeszd az érzelmeket.</p>
+                
+                <div class="flex gap-2 mb-4">
+                    <input type="text" x-model="newEmotion" placeholder="Új érzelem..." class="flex-1">
+                    <button @click="addEmotion()" class="btn-primary">Hozzáad</button>
+                </div>
+                
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="(emotion, index) in emotionsList" :key="index">
+                        <div class="flex items-center gap-2 px-3 py-2 rounded-full bg-orange-100">
+                            <span x-text="emotion"></span>
+                            <button @click="removeEmotion(index)" class="text-red-500 hover:text-red-700">×</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <button @click="saveSettings()" class="btn-primary">Beállítások mentése</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://{{ ansible_host }}:8888/api';
+        
+        function journalApp() {
+            return {
+                // State
+                user: null,
+                introCompleted: false,
+                page: 'auth',
+                error: '',
+                showCalendar: false,
+                
+                // Auth
+                authForm: {
+                    username: '',
+                    password: ''
+                },
+                
+                // Intro reflection
+                introForm: {
+                    q1_important_events: '',
+                    q2_current_thoughts: '',
+                    q3_physical_symptoms: '',
+                    q4_current_feelings: '',
+                    q5_brought_closer: '',
+                    q6_brought_further: '',
+                    q7_change_in_10_weeks: ''
+                },
+                
+                // Daily entry
+                dailyForm: {
+                    entry_date: new Date().toISOString().split('T')[0],
+                    energy_level: 5,
+                    selected_emotions: [],
+                    how_want_to_feel: '',
+                    daily_mantra: '',
+                    grateful_1: '', grateful_2: '', grateful_3: '',
+                    goal_1: '', goal_2: '', goal_3: '',
+                    selfcare_actions: '',
+                    free_journal: '',
+                    favorite_moment: ''
+                },
+                
+                // Weekly reflection
+                weeklyForm: {
+                    week_number: 1,
+                    week_start_date: '',
+                    week_end_date: '',
+                    current_mood: '',
+                    important_results: '',
+                    important_realizations: '',
+                    proud_1: '', proud_2: '', proud_3: '', proud_4: '', proud_5: '',
+                    change_phase: '',
+                    change_reflection: '',
+                    next_week_focus: '',
+                    task_1: '', task_2: '', task_3: '', task_4: '', task_5: ''
+                },
+                
+                // Final reflection
+                finalForm: {
+                    q1_starting_point: '',
+                    q2_feeling_and_goal: '',
+                    q3_journey_obstacles: '',
+                    q4_arrival_changes: '',
+                    q5_self_learning: '',
+                    q6_future_path: '',
+                    q7_journaling_impact: '',
+                    q8_celebration: ''
+                },
+                
+                // Tracking
+                daysSinceStart: 0,
+                currentWeek: 1,
+                showWeeklyReflection: false,
+                showFinalReflection: false,
+                
+                // Emotions list (default)
+                emotionsList: [
+                    'csalódott', 'stresszes', 'kiábrándult', 'túlterhelt', 'magányos', 'szorongó',
+                    'félős', 'szomorú', 'undorodó', 'boldog', 'depressziós', 'megbántott',
+                    'szeretettel teli', 'kíváncsi', 'lenyűgözött', 'meglepődött', 'túlpörgött',
+                    'lekapcsolódott', 'önmagát nem találó', 'nyugodt', 'megalázott', 'harmonikus',
+                    'energikus', 'aggódó'
+                ],
+                
+                newEmotion: '',
+                entryList: [],
+                autoSaveTimer: null,
+                
+                // Auth methods
+                async register() {
+                    try {
+                        const res = await fetch(`${API_URL}/register`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.authForm)
+                        });
+                        
+                        if (!res.ok) throw new Error('Regisztráció sikertelen');
+                        
+                        alert('Regisztráció sikeres! Jelentkezz be.');
+                        this.error = '';
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+                
+                async login() {
+                    try {
+                        const credentials = btoa(`${this.authForm.username}:${this.authForm.password}`);
+                        const res = await fetch(`${API_URL}/user/status`, {
+                            headers: { 'Authorization': `Basic ${credentials}` }
+                        });
+                        
+                        if (!res.ok) throw new Error('Hibás felhasználónév vagy jelszó');
+                        
+                        const data = await res.json();
+                        this.user = data;
+                        this.introCompleted = data.intro_completed;
+                        
+                        // Store credentials
+                        localStorage.setItem('auth', credentials);
+                        
+                        // Navigate
+                        if (this.introCompleted) {
+                            this.page = 'daily';
+                            await this.loadDailyEntry();
+                            await this.loadEntryList();
+                            await this.afterLogin();
+                        } else {
+                            this.page = 'intro';
+                        }
+                        
+                        this.error = '';
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+                
+                logout() {
+                    this.user = null;
+                    this.introCompleted = false;
+                    this.page = 'auth';
+                    localStorage.removeItem('auth');
+                },
+                
+                // Intro reflection
+                async saveIntroReflection() {
+                    try {
+                        const res = await fetch(`${API_URL}/intro-reflection`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${localStorage.getItem('auth')}`
+                            },
+                            body: JSON.stringify(this.introForm)
+                        });
+                        
+                        if (!res.ok) throw new Error('Mentés sikertelen');
+                        
+                        this.introCompleted = true;
+                        this.page = 'daily';
+                        await this.loadDailyEntry();
+                        await this.loadEntryList();
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                },
+                
+                // Daily entry methods
+                toggleEmotion(emotion) {
+                    const index = this.dailyForm.selected_emotions.indexOf(emotion);
+                    if (index > -1) {
+                        this.dailyForm.selected_emotions.splice(index, 1);
+                    } else {
+                        this.dailyForm.selected_emotions.push(emotion);
+                    }
+                },
+                
+                async loadDailyEntry() {
+                    try {
+                        const res = await fetch(`${API_URL}/entries/${this.dailyForm.entry_date}`, {
+                            headers: { 'Authorization': `Basic ${localStorage.getItem('auth')}` }
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data) {
+                                Object.assign(this.dailyForm, data);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Load error:', err);
+                    }
+                },
+                
+                async saveDailyEntry() {
+                    try {
+                        const res = await fetch(`${API_URL}/entries`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${localStorage.getItem('auth')}`
+                            },
+                            body: JSON.stringify(this.dailyForm)
+                        });
+                        
+                        if (!res.ok) throw new Error('Mentés sikertelen');
+                        
+                        alert('✅ Bejegyzés mentve!');
+                        await this.loadEntryList();
+                        
+                        // Check if weekly or final reflection should trigger
+                        await this.checkReflectionTriggers();
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                },
+                
+                async checkReflectionTriggers() {
+                    // Calculate days since user creation
+                    const userCreated = new Date(this.user.created_at);
+                    const today = new Date(this.dailyForm.entry_date);
+                    const daysDiff = Math.floor((today - userCreated) / (1000 * 60 * 60 * 24)) + 1;
+                    this.daysSinceStart = daysDiff;
+                    
+                    // Check for weekly reflection (every 7 days)
+                    if (daysDiff % 7 === 0 && daysDiff > 0) {
+                        const weekNum = Math.floor(daysDiff / 7);
+                        this.currentWeek = weekNum;
+                        
+                        // Check if weekly reflection already exists
+                        const existingWeekly = await fetch(`${API_URL}/weekly-reflection/${weekNum}`, {
+                            headers: { 'Authorization': `Basic ${localStorage.getItem('auth')}` }
+                        });
+                        
+                        if (existingWeekly.ok) {
+                            const data = await existingWeekly.json();
+                            if (!data) {
+                                // No reflection yet, show form
+                                this.weeklyForm.week_number = weekNum;
+                                this.weeklyForm.week_start_date = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                this.weeklyForm.week_end_date = this.dailyForm.entry_date;
+                                this.showWeeklyReflection = true;
+                                this.page = 'weekly';
+                            }
+                        }
+                    }
+                    
+                    // Check for final reflection (70 days)
+                    if (daysDiff >= 70) {
+                        const existingFinal = await fetch(`${API_URL}/final-reflection`, {
+                            headers: { 'Authorization': `Basic ${localStorage.getItem('auth')}` }
+                        });
+                        
+                        if (existingFinal.ok) {
+                            const data = await existingFinal.json();
+                            if (!data) {
+                                this.showFinalReflection = true;
+                                this.page = 'final';
+                            }
+                        }
+                    }
+                },
+                
+                // Weekly reflection methods
+                async saveWeeklyReflection() {
+                    try {
+                        const res = await fetch(`${API_URL}/weekly-reflection`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${localStorage.getItem('auth')}`
+                            },
+                            body: JSON.stringify(this.weeklyForm)
+                        });
+                        
+                        if (!res.ok) throw new Error('Mentés sikertelen');
+                        
+                        alert('✅ Heti reflexió mentve!');
+                        this.showWeeklyReflection = false;
+                        this.page = 'daily';
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                },
+                
+                async loadWeeklyReflection(weekNumber) {
+                    try {
+                        const res = await fetch(`${API_URL}/weekly-reflection/${weekNumber}`, {
+                            headers: { 'Authorization': `Basic ${localStorage.getItem('auth')}` }
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data) {
+                                Object.assign(this.weeklyForm, data);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Weekly load error:', err);
+                    }
+                },
+                
+                // Final reflection methods
+                async saveFinalReflection() {
+                    try {
+                        const res = await fetch(`${API_URL}/final-reflection`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${localStorage.getItem('auth')}`
+                            },
+                            body: JSON.stringify(this.finalForm)
+                        });
+                        
+                        if (!res.ok) throw new Error('Mentés sikertelen');
+                        
+                        alert('🎉 Gratulálunk! Záró reflexió mentve!');
+                        this.showFinalReflection = false;
+                        this.page = 'daily';
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                },
+                
+                async loadFinalReflection() {
+                    try {
+                        const res = await fetch(`${API_URL}/final-reflection`, {
+                            headers: { 'Authorization': `Basic ${localStorage.getItem('auth')}` }
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data) {
+                                Object.assign(this.finalForm, data);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Final load error:', err);
+                    }
+                },
+                
+                async loadEntryList() {
+                    try {
+                        const res = await fetch(`${API_URL}/entries`, {
+                            headers: { 'Authorization': `Basic ${localStorage.getItem('auth')}` }
+                        });
+                        
+                        if (res.ok) {
+                            this.entryList = await res.json();
+                        }
+                    } catch (err) {
+                        console.error('List load error:', err);
+                    }
+                },
+                
+                selectDate(date) {
+                    this.dailyForm.entry_date = date;
+                    this.loadDailyEntry();
+                    this.showCalendar = false;
+                },
+                
+                // Settings
+                addEmotion() {
+                    if (this.newEmotion.trim()) {
+                        this.emotionsList.push(this.newEmotion.trim());
+                        this.newEmotion = '';
+                    }
+                },
+                
+                removeEmotion(index) {
+                    this.emotionsList.splice(index, 1);
+                },
+                
+                async saveSettings() {
+                    try {
+                        // Save custom emotions (simplified - full wheel update not implemented yet)
+                        alert('✅ Beállítások mentve!');
+                        this.page = 'daily';
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                },
+                
+                // Auto-save (every 30s)
+                startAutoSave() {
+                    this.autoSaveTimer = setInterval(() => {
+                        if (this.page === 'daily' && this.user) {
+                            this.saveDailyEntry();
+                        }
+                    }, 30000);
+                },
+                
+                // Init
+                init() {
+                    // Check for stored auth
+                    const auth = localStorage.getItem('auth');
+                    if (auth) {
+                        this.authForm.username = atob(auth).split(':')[0];
+                        this.authForm.password = atob(auth).split(':')[1];
+                        this.login();
+                    }
+                    
+                    this.startAutoSave();
+                },
+                
+                async afterLogin() {
+                    // Called after successful login
+                    if (this.introCompleted) {
+                        await this.checkReflectionTriggers();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
